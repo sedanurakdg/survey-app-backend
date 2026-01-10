@@ -19,16 +19,17 @@ public static class DependencyInjection
         // Repositories
         services.AddScoped<IAnswerTemplateRepository, AnswerTemplateRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
+        services.AddScoped<ISurveyRepository, SurveyRepository>();
+
         services.AddScoped<ISurveyFillReadRepository, SurveyFillReadRepository>();
         services.AddScoped<ISurveySubmissionRepository, SurveySubmissionRepository>();
-        services.AddScoped<ISurveyReportRepository, SurveyReportRepository>();
-        services.AddScoped<ISurveyRepository, SurveyRepository>();
-        // Identity (EF Stores)
-        services
-            .AddIdentity<AppUser, IdentityRole<long>>(opt => opt.User.RequireUniqueEmail = true)
-            .AddEntityFrameworkStores<AppDbContext>()
-            .AddDefaultTokenProviders();
 
+        services.AddScoped<ISurveyReportRepository, SurveyReportRepository>();
+
+        services
+           .AddIdentity<AppUser, IdentityRole<long>>(opt => opt.User.RequireUniqueEmail = true)
+           .AddEntityFrameworkStores<AppDbContext>()
+           .AddDefaultTokenProviders();
         return services;
     }
 }

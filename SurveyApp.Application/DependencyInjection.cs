@@ -12,15 +12,14 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Application services
+        // Use-case / Service registrations
+        services.AddScoped<ISurveyService, SurveyService>();
+
         services.AddScoped<IAnswerTemplateService, AnswerTemplateService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<ISurveyFillService, SurveyFillService>();
         services.AddScoped<ISurveyReportService, SurveyReportService>();
         services.AddScoped<ISurveyService, SurveyService>();
-
-        // Validators (assembly scan)
-        services.AddValidatorsFromAssemblyContaining<CreateAnswerTemplateRequestValidator>();
 
         return services;
     }

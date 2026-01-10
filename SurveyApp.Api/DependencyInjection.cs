@@ -18,16 +18,14 @@ public static class DependencyInjection
         {
             o.Filters.Add<DomainValidationExceptionFilter>();
         });
+
         services.AddProblemDetails();
 
-        services.AddScoped<ISurveyService, SurveyService>();
-
-        // FluentValidation zaten kuruluysa assembly scan'e dahil et
+        // FluentValidation
         services.AddValidatorsFromAssemblyContaining<CreateSurveyRequestValidator>();
-        // FluentValidation -> MVC pipeline
         services.AddFluentValidationAutoValidation();
 
-        // IMPORTANT: Identity cookie redirect -> 401/403 (API standard)
+        // Identity cookie redirect -> 401/403 (API standard)
         services.ConfigureApplicationCookie(options =>
         {
             options.Events.OnRedirectToLogin = ctx =>
@@ -43,20 +41,20 @@ public static class DependencyInjection
             };
         });
 
-        // JWT auth (set defaults explicitly)
+        // JWT
         var jwt = config.GetSection("Jwt");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Secret"]!));
 
         services
-            .AddAuthentication(options =>
+            .AddAuthentication(o =>
             {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer(options =>
+            .AddJwtBearer(o =>
             {
-                options.TokenValidationParameters = new TokenValidationParameters
+                o.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
@@ -117,6 +115,7 @@ public static class DependencyInjection
 
         app.UseHttpsRedirection();
 
+        // Auth/Authorization pipeline (CORS ve RateLimit Program.cs’te yönetilecek)
         app.UseAuthentication();
         app.UseAuthorization();
 
@@ -125,9 +124,7 @@ public static class DependencyInjection
 
     public static WebApplication MapApiEndpoints(this WebApplication app)
     {
-        app.MapControllers();
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
-
         return app;
     }
 }
