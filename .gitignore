@@ -1,0 +1,20 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.nupkg
+*.snupkg
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+.cache/
+
+# Env / secrets
+appsettings.Development.json
+appsettings.*.Development.json
+.env
+.env.*
