@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using SurveyApp.Core.Identity;
 using System.IdentityModel.Tokens.Jwt;
@@ -9,6 +10,7 @@ using System.Text;
 namespace SurveyApp.Api.Controllers;
 
 [ApiController]
+[EnableRateLimiting("auth")]
 [Route("api/[controller]")]
 public sealed class AuthController : ControllerBase
 {

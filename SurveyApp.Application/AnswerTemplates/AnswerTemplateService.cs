@@ -15,7 +15,6 @@ public sealed class AnswerTemplateService : IAnswerTemplateService
 
         return items
             .OrderByDescending(x => x.Id)
-            .Where(s => s.IsActive)
             .Select(x => new AnswerTemplateListDto(x.Id, x.Name, x.IsActive, x.Options.Count))
             .ToList();
     }

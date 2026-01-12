@@ -14,6 +14,7 @@ public sealed class AnswerTemplateRepository : IAnswerTemplateRepository
     public async Task<List<AnswerTemplate>> ListAsync(CancellationToken ct)
         => await _db.AnswerTemplates
             .AsNoTracking()
+            .Where(x => x.IsActive)
             .Include(x => x.Options)
             .ToListAsync(ct);
     public Task<bool> ExistsAsync(long id, CancellationToken ct)
