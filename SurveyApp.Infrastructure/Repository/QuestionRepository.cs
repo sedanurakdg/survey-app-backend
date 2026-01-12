@@ -13,6 +13,7 @@ public sealed class QuestionRepository : IQuestionRepository
     public async Task<List<Question>> ListAsync(CancellationToken ct)
         => await _db.Questions
             .AsNoTracking()
+            .Where(x => x.IsActive)
             .Include(x => x.AnswerTemplate)
             .OrderByDescending(x => x.Id)
             .ToListAsync(ct);

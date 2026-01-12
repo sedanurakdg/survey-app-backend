@@ -13,6 +13,7 @@ public sealed class SurveyRepository : ISurveyRepository
     public async Task<List<Survey>> ListAsync(CancellationToken ct)
         => await _db.Surveys
             .AsNoTracking()
+            .Where(x => x.IsActive)
             .OrderByDescending(x => x.Id)
             .ToListAsync(ct);
 

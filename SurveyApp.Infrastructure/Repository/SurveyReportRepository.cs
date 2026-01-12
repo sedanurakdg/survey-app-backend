@@ -11,7 +11,8 @@ public sealed class SurveyReportRepository : ISurveyReportRepository
 
     public async Task<List<SurveyReportRow>> ListSurveysAsync(string? search, CancellationToken ct)
     {
-        var surveys = _db.Surveys.AsNoTracking();
+        var surveys = _db.Surveys.AsNoTracking()
+            .Where(s => s.IsActive);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -19,38 +20,37 @@ public sealed class SurveyReportRepository : ISurveyReportRepository
             surveys = surveys.Where(s => EF.Functions.Like(s.Title, pattern));
         }
 
+        var assignmentsAgg =
+            _db.SurveyAssignments.AsNoTracking()
+                .GroupBy(x => x.SurveyId)
+                .Select(g => new { SurveyId = g.Key, Cnt = g.Count() });
+
+        var submissionsAgg =
+            _db.SurveySubmissions.AsNoTracking()
+                .GroupBy(x => x.SurveyId)
+                .Select(g => new { SurveyId = g.Key, Cnt = g.Count() });
+
         var query =
             from s in surveys
-            join a in _db.SurveyAssignments.AsNoTracking()
-                .GroupBy(x => x.SurveyId)
-                .Select(g => new { SurveyId = g.Key, Cnt = g.Count() })
-                on s.Id equals a.SurveyId into aj
-            from a in aj.DefaultIfEmpty()
-
-            join c in _db.SurveySubmissions.AsNoTracking()
-                .GroupBy(x => x.SurveyId)
-                .Select(g => new { SurveyId = g.Key, Cnt = g.Count() })
-                on s.Id equals c.SurveyId into cj
-            from c in cj.DefaultIfEmpty()
-
             orderby s.Id descending
             select new SurveyReportRow(
                 s.Id,
                 s.Title,
                 s.StartsAtUtc,
                 s.EndsAtUtc,
-                a != null ? a.Cnt : 0,
-                c != null ? c.Cnt : 0
+                assignmentsAgg.Where(x => x.SurveyId == s.Id).Select(x => x.Cnt).FirstOrDefault(),
+                submissionsAgg.Where(x => x.SurveyId == s.Id).Select(x => x.Cnt).FirstOrDefault()
             );
 
         return await query.ToListAsync(ct);
     }
 
 
+
     public async Task<SurveyUsersReport?> GetSurveyUsersAsync(long surveyId, string? search, CancellationToken ct)
     {
         var survey = await _db.Surveys.AsNoTracking()
-            .Where(s => s.Id == surveyId)
+            .Where(s => s.Id == surveyId && s.IsActive)
             .Select(s => new { s.Id, s.Title })
             .FirstOrDefaultAsync(ct);
 
@@ -69,22 +69,21 @@ public sealed class SurveyReportRepository : ISurveyReportRepository
         }
 
         var submissions = _db.SurveySubmissions.AsNoTracking()
-            .Where(x => x.SurveyId == surveyId)
-            .Select(x => new { x.UserId, x.SubmittedAtUtc });
+            .Where(x => x.SurveyId == surveyId);
 
-        var query =
-            from a in assignments
-            join s in submissions on a.Id equals s.UserId into sj
-            from s in sj.DefaultIfEmpty()
-            orderby a.Email
-            select new SurveyUserRow(
+        var users = await assignments
+            .OrderBy(a => a.Email)
+            .Select(a => new SurveyUserRow(
                 a.Id,
                 a.Email,
-                s != null,
-                s == null ? null : s.SubmittedAtUtc
-            );
+                submissions.Any(s => s.UserId == a.Id),
+                submissions
+                    .Where(s => s.UserId == a.Id)
+                    .Select(s => (DateTime?)s.SubmittedAtUtc)   // nullable projection
+                    .FirstOrDefault()
+            ))
+            .ToListAsync(ct);
 
-        var users = await query.ToListAsync(ct);
         return new SurveyUsersReport(survey.Id, survey.Title, users);
     }
 
@@ -101,12 +100,16 @@ public sealed class SurveyReportRepository : ISurveyReportRepository
         var survey = await _db.Surveys.AsNoTracking()
             .Where(s => s.Id == surveyId)
             .Select(s => new { s.Id, s.Title })
-            .FirstAsync(ct);
+            .FirstOrDefaultAsync(ct);
+
+        if (survey is null) return null;
 
         var user = await _db.Users.AsNoTracking()
             .Where(u => u.Id == userId)
             .Select(u => new { u.Id, Email = u.Email ?? u.UserName ?? "" })
-            .FirstAsync(ct);
+            .FirstOrDefaultAsync(ct);
+
+        if (user is null) return null;
 
         var rows = await (
             from a in _db.SurveySubmissionAnswers.AsNoTracking()
@@ -144,6 +147,7 @@ public sealed class SurveyReportRepository : ISurveyReportRepository
             answerRows
         );
     }
+
 
 
 }

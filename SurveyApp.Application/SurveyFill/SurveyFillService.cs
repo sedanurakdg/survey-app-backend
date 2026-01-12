@@ -39,7 +39,12 @@ public sealed class SurveyFillService : ISurveyFillService
         var now = DateTime.UtcNow;
         var survey = await _readRepo.GetAssignedActiveDetailAsync(surveyId, userId, now, ct);
         if (survey is null) return null;
+        var isSubmitted = await _submissionRepo.HasSubmittedAsync(surveyId, userId, ct);
+        var submission = await _submissionRepo.GetBySurveyAndUserAsync(surveyId, userId, ct);
 
+        var selectedMap = submission?.Answers
+                            .ToDictionary(a => a.QuestionId, a => a.SelectedOptionIndex)
+                            ?? new Dictionary<long, short>();
         var questions = survey.Questions
             .OrderBy(x => x.SortOrder)
             .Select(x =>
@@ -51,8 +56,8 @@ public sealed class SurveyFillService : ISurveyFillService
                     .OrderBy(o => o.SortOrder)
                     .Select(o => new ChoiceDto(o.SortOrder, o.Text))
                     .ToList();
-
-                return new FillQuestionDto(q.Id, q.Text, choices);
+                var SelectedOptionIndex = selectedMap.TryGetValue(q.Id, out var idx) ? (int?)idx : null;
+                return new FillQuestionDto(q.Id, q.Text, choices, SelectedOptionIndex);
             })
             .ToList();
 
@@ -62,6 +67,7 @@ public sealed class SurveyFillService : ISurveyFillService
             survey.Description,
             survey.StartsAtUtc,
             survey.EndsAtUtc,
+            IsSubmitted: isSubmitted,
             questions
         );
     }
